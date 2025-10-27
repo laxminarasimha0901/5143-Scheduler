@@ -99,6 +99,7 @@ def generate_process(user_class, max_bursts=20):
 
     return {
         "pid": ppid,
+        "arrival_time": arrival_time,     # added arrival time here
         "class_id": user_class["class_id"],
         "priority": priority,
         "cpu_budget": cpu_budget,
