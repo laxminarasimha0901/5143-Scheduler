@@ -8,6 +8,7 @@ class Job:
     def __init__(self, job_id, bursts):
         self.id = job_id
         self.bursts = bursts  # e.g., [5, 3, 2]
+        self.quantum = quantum # use the existing time quantum
         self.arrival_time = arrival_time
         self.current_burst = 0
         self.state = "ready"
@@ -19,7 +20,7 @@ class Job:
 class Scheduler:
     def __init__(self, jobs):
         self.clock = 0
-        self.ready = jobs[:]  # initial ready queue
+        self.ready = []  
         self.wait = []
         self.cpu = []
         self.io = []
@@ -35,8 +36,7 @@ class Scheduler:
     def check_arrivals(self):
     """Move jobs that have arrived into the ready queue."""
     arrived = []
-    
-    for job in self.waiting_arrivals:
+    for job in list(self.waiting_arrivals):
         if self.clock == job.arrival_time:
             job.state = "ready"
             self.ready.append(job)
@@ -63,10 +63,17 @@ class Scheduler:
         if self.cpu:
             job = self.cpu.pop(0)
             job.current_burst += 1
+            job.remaining_quantum -= 1 # decrement the quantum
             if job.current_burst >= job.bursts[0]:
                 job.state = "wait"
                 job.current_burst = 0
+                job.remaining_quantum = job.quantum
                 self.wait.append(job)
+            # Quantum expired before CPU burst finished
+            elif job.remaining_quantum <= 0:
+                job.state = "ready"
+                job.remaining_quantum = job.quantum
+                self.ready.append(job)
             else:
                 self.cpu.append(job)
         elif self.ready:
