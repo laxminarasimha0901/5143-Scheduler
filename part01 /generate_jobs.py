@@ -63,7 +63,7 @@ def generate_io_burst(user_class):
 # ----------------------------------------------------------
 # Generate one process until CPU budget is consumed
 # ----------------------------------------------------------
-def generate_process(user_class, max_bursts=20):
+def generate_process(user_class, arrival_time, max_bursts=20):
     global pid
 
     # ppid= str(uuid.uuid4())[:8]
