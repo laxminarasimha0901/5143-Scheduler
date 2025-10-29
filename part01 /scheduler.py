@@ -5,13 +5,13 @@ import random
 
 
 class Job:
-    def __init__(self, job_id, bursts):
+    def __init__(self, job_id, bursts, arrival_time=0, quantum=4):
         self.id = job_id
         self.bursts = bursts  # e.g., [5, 3, 2]
         self.quantum = quantum # use the existing time quantum
         self.arrival_time = arrival_time
         self.current_burst = 0
-        self.state = "ready"
+        self.state = "ready" # "new"
 
     def __repr__(self):
         return f"P{self.id}"
@@ -34,17 +34,16 @@ class Scheduler:
     # move said job(s) to the ready queue. 
     # -----------------------------------------------------
     def check_arrivals(self):
-    """Move jobs that have arrived into the ready queue."""
-    arrived = []
-    for job in list(self.waiting_arrivals):
-        if self.clock == job.arrival_time:
-            job.state = "ready"
-            self.ready.append(job)
-            arrived.append(job)
+        arrived = []
+        for job in list(self.waiting_arrivals):
+            if self.clock == job.arrival_time:
+                job.state = "ready"
+                self.ready.append(job)
+                arrived.append(job)
     
     # remove arrived jobs from waiting list
-    for job in arrived:
-        self.waiting_arrivals.remove(job)
+        for job in arrived:
+            self.waiting_arrivals.remove(job)
 
     # -----------------------------------------------------
     def has_jobs(self):
