@@ -70,3 +70,55 @@ class Visualizer:
         self.screen.blit(clock_text, (600, 20))
         pygame.display.flip()
         self.clock.tick(30)  # limit to 30 FPS
+
+    # =========================================================
+# MAIN LOOP – runs the scheduler and updates visualization
+# =========================================================
+if __name__ == "__main__":
+    import json
+    from scheduler import Scheduler, Job
+
+    # -----------------------------------------------------
+    # Load your generated process file
+    # -----------------------------------------------------
+    with open("../job_jsons/process_file_0001.json") as f:
+        processes = json.load(f)
+
+    # Convert JSON objects into Job instances
+    jobs = []
+    for p in processes:
+        # flatten bursts if needed
+        cpu_bursts = [b.get("cpu", 0) for b in p["bursts"] if "cpu" in b]
+        job = Job(
+            job_id=p["pid"],
+            bursts=cpu_bursts,
+            arrival_time=p["arrival_time"],
+            quantum=p.get("quantum", 4),
+        )
+        jobs.append(job)
+
+    # Initialize scheduler and visualizer
+    scheduler = Scheduler(jobs)
+    viz = Visualizer(scheduler)
+
+    # -----------------------------------------------------
+    # Simulation loop
+    # -----------------------------------------------------
+    running = True
+    while running:
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                running = False
+
+        # Step simulation if there’s work left
+        if scheduler.has_jobs():
+            scheduler.step()
+            viz.update_from_scheduler()
+            viz.draw()
+        else:
+            # Pause at end so you can see final state
+            viz.draw()
+            pygame.time.wait(2000)
+            running = False
+
+    pygame.quit()
