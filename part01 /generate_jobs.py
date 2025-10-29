@@ -105,6 +105,7 @@ def generate_process(user_class, arrival_time, max_bursts=20):
         "cpu_budget": cpu_budget,
         "cpu_used": cpu_used,
         "bursts": bursts,
+        "quantum": user_class.get("quantum", 4),  # get the time quantum default 4 if not provided
     }
 
 
