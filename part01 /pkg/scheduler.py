@@ -1,4 +1,4 @@
-
+# This is Dr. Griffin's version (I think) of scheduler.py.
 from pkg.clock import Clock
 from pkg.cpu import CPU
 from pkg.ioDevice import IODevice
