@@ -1,156 +1,74 @@
-"""
-TODO: Add an arrival time to the generated processes and only allow entry when the clock == arrival time.
-TODO: Add a quantum (time slice) countdown for Round Robin scheduling.
-"""
-
-import collections
-import csv
+# main.py
 import json
-from multiprocessing import process
 import sys
-from rich import print
-
-from pkg.clock import Clock
-from pkg.scheduler import Scheduler
 from pkg.process import Process
+from schedulers import FCFSScheduler, RRScheduler, SJFScheduler, SRTFScheduler
+from visualizer import run_simulation_with_gantt
 
-
-# ---------------------------------------
-# Load JSON into Process objects
-# ---------------------------------------
-def load_processes_from_json(filename="generated_processes.json", limit=None):
-    """Load processes from a JSON file into Process instances
-    Args:
-        filename: path to the JSON file
-        limit: if set, only load this many processes
-    Returns:
-        list of Process instances
-    Raises:
-        FileNotFoundError if the file does not exist
-    """
-
-    # If limit is set, only load that many processes
+def load_processes_from_json(filename, limit=None):
     with open(filename) as f:
         data = json.load(f)
-
     processes = []
-
-    # If limit is None or greater than available, use all
-    if limit is None or limit > len(data):
-        limit = len(data)
-
-    # :limit slices the list of processes loaded from the JSON file to only include
-    # the first 'limit' number of processes.
-    # This is useful for testing or running simulations with a smaller subset of processes.
     for p in data[:limit]:
-
-        # Create a list of bursts in the expected format for Process
-        # [{"cpu": X}, {"io": {"type": T, "duration": D}}, ...]
         bursts = []
-
-        # Iterate over each burst in the process's burst list
-        # and append to bursts list in the correct format
         for b in p["bursts"]:
             if "cpu" in b:
-                # format {"cpu": X}
                 bursts.append({"cpu": b["cpu"]})
-
             elif "io" in b:
-                # format {"io": {"type": T, "duration": D}}
-                bursts.append(
-                    {"io": {"type": b["io"]["type"], "duration": b["io"]["duration"]}}
-                )
-
-        proc = Process(pid=p["pid"], bursts=bursts, priority=p["priority"])
+                bursts.append({"io": {"type": b["io"]["type"], "duration": b["io"]["duration"]}})
+        proc = Process(
+            pid=p["pid"],
+            bursts=bursts,
+            priority=p["priority"],
+            arrival_time=p["arrival_time"],
+            quantum=p.get("quantum", 4)
+        )
         processes.append(proc)
-
     return processes
 
-
-def parse_value(value):
-    """
-    Try to convert string to appropriate type since everything read in from command line is a string
-    Args:
-        value: string value to parse
-    Returns:
-        value converted to bool, int, float, or original string
-    """
-    # Try boolean
-    if value.lower() in ("true", "false"):
-        return value.lower() == "true"
-    # Try int
-    try:
-        return int(value)
-    except ValueError:
-        pass
-    # Try float
-    try:
-        return float(value)
-    except ValueError:
-        pass
-    # Give up, return string
-    return value
-
-
-def argParse():
-    """Parse command line arguments into a dictionary
-    Returns:
-        dict of argument names to values
-    """
-    kwargs = {}
-    for arg in sys.argv[1:]:
-        if "=" in arg:
-            key, value = arg.split("=", 1)
-            kwargs[key] = parse_value(value)
-    return kwargs
-
-
-# ---------------------------------------
-# Example usage
-# ---------------------------------------
 if __name__ == "__main__":
-    # Parse command line arguments
-    args = argParse()
+    args = {k: v for arg in sys.argv[1:] for k, v in [arg.split("=", 1)]} if len(sys.argv) > 1 else {}
+    file_num = args.get("file_num", "1").zfill(4)
+    limit = int(args["limit"]) if "limit" in args else None
+    cpus = int(args.get("cpus", 1))
+    ios = int(args.get("ios", 1))
 
-    # Get parameters if they exist, else use defaults
-    # file_num is used to load different process files and save different timeline files
-    file_num = args.get("file_num", 1)
+    processes = load_processes_from_json(f"./job_jsons/processfile_{file_num}.json", limit)
 
-    # Limit is used to restrict the number of processes loaded
-    limit = args.get("limit", None)
-
-    # Number of CPUs and IO devices
-    cpus = args.get("cpus", 1)
-    ios = args.get("ios", 1)
-
-    # Run the simulation
-    clock = Clock()
-    print(f"\n=== Simulation with {cpus} CPU(s) and {ios} IO device(s) ===")
-
-    # Load processes from JSON file
-    processes = load_processes_from_json(
-        f"./job_jsons/process_file_{str(file_num).zfill(4)}.json", limit=limit
-    )
-
-    # Initialize scheduler and add processes
-    sched = Scheduler(num_cpus=cpus, num_ios=ios, verbose=True)
-
-    # Add processes to scheduler
+    # Default scheduler (can be overridden by command line argument)
+    scheduler_class_name = args.get("scheduler", "RRScheduler")
+    
+    # Map scheduler name to class
+    scheduler_map = {
+        "FCFS": FCFSScheduler,
+        "RR": RRScheduler,
+        "SJF": SJFScheduler,
+        "SRTF": SRTFScheduler
+    }
+    
+    SchedulerClass = scheduler_map.get(scheduler_class_name, RRScheduler)
+    
+    print(f"Running simulation with {SchedulerClass.__name__}")
+    print(f"Processes loaded: {len(processes)}")
+    print(f"CPUs: {cpus}, I/O devices: {ios}")
+    
+    scheduler = SchedulerClass(num_cpus=cpus, num_ios=ios, verbose=False)
     for p in processes:
-        sched.add_process(p)
+        scheduler.add_process(p)
 
-    # Run the scheduler
-    sched.run()
+    # Run simulation with Gantt chart visualization and timeline export
+    output_filename = f"./timelines/timeline{file_num}.csv"
+    visualizer = run_simulation_with_gantt(scheduler, output_filename)
 
-    # Print final log and stats
-    print("\n--- Final Log ---")
-    print(sched.timeline())
-    print(f"\nTime elapsed: {sched.clock.now()}")
-    print(f"Finished: {[p.pid for p in sched.finished]}")
-
-    # Export structured logs
-    sched.export_json(f"./timelines/timeline{str(file_num).zfill(4)}.json")
-    sched.export_csv(f"./timelines/timeline{str(file_num).zfill(4)}.csv")
-    clock.reset()
-    # Print process statistics
-    sched.print_stats()
+    # Print final statistics
+    print("\n" + "="*60)
+    print("SIMULATION COMPLETE")
+    print("="*60)
+    scheduler.print_stats()
+    
+    # Export timeline data
+    scheduler.export_json(f"./timelines/timeline{file_num}.json")
+    
+    print(f"Timeline data exported to:")
+    print(f"  CSV: {output_filename}")
+    print(f"  JSON: ./timelines/timeline{file_num}.json")
