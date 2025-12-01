@@ -1,5 +1,5 @@
 # =========================================================
-# scheduler.py  – Pure simulation logic (no pygame)
+# scheduler.py  – Pure simulation logic
 # =========================================================
 import random
 
