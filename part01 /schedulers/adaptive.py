@@ -14,7 +14,7 @@ class AdaptiveScheduler:
         self.verbose = verbose
         self.aging_rate = aging_rate
 
-        self.ready_queue = []
+        self.ready_queue = deque()
         self.wait_queue = deque()
 
         self.cpu_queue = [None] * num_cpus
@@ -148,3 +148,4 @@ class AdaptiveScheduler:
         print(f"Average Waiting Time:   {total_waiting/len(self.finished):.2f}")
         print(f"Total Context Switches: 0 (FCFS is non-preemptive)")
         print(f"Total Simulation Time: {self.clock}")
+
