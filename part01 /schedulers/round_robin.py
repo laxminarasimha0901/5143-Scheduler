@@ -12,7 +12,7 @@ class RRScheduler(Scheduler):
     """
     
     def __init__(self, num_cpus=1, num_ios=1, quantum=4, verbose=False):
-        super().__init__(num_cpus, num_ios, verbose)  # ✅ Must call this FIRST
+        super().__init__(num_cpus, num_ios, verbose)  # Must call this FIRST
         self.num_cpus = num_cpus
         self.num_ios = num_ios
         self.quantum = quantum
