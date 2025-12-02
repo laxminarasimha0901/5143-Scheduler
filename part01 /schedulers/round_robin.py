@@ -1,8 +1,16 @@
-# schedulers/rr.py
+# Round Robin Scheduling Algorithm Implementation
+# schedulers/round_robin.py
 from pkg import Scheduler
 from collections import deque
 
 class RRScheduler(Scheduler):
+    """
+    Priority Scheduling (preemptive).
+    - Each job gets a fixed time slice (quantum).
+    - If a job's CPU burst is not finished when its quantum expires,
+      it is preempted and placed at the back of the ready queue.
+    """
+    
     def __init__(self, num_cpus=1, num_ios=1, quantum=4, verbose=False):
         super().__init__(num_cpus, num_ios, verbose)  # ✅ Must call this FIRST
         self.num_cpus = num_cpus
@@ -64,6 +72,7 @@ class RRScheduler(Scheduler):
         self._dispatch_to_io_devices()
 
     def has_jobs(self):
+        """Check if there are any jobs still being processed"""
         return (len(self.ready_queue) > 0 or 
                 len(self.wait_queue) > 0 or 
                 any(p is not None for p in self.cpu_queue) or 
@@ -155,5 +164,5 @@ class RRScheduler(Scheduler):
             # Check if device is idle and there are waiting processes
             if io_dev.current is None and len(self.wait_queue) > 0:
                 process = self.wait_queue.popleft()
-                process.state = "waiting"
+                process.state = "io_waiting"
                 io_dev.current = process  # Assign directly

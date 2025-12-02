@@ -1,6 +1,9 @@
+# Shortest Job First (SJF) Scheduling Algorithm Implementation
 # schedulers/sjf.py
 from pkg import Scheduler
 from collections import deque
+import json
+import csv
 
 class SJFScheduler(Scheduler):
     def __init__(self, num_cpus=1, num_ios=1, verbose=False):
@@ -123,11 +126,14 @@ class SJFScheduler(Scheduler):
     
     def _dispatch_to_io_devices(self):
         """Dispatch waiting processes to available I/O devices"""
+        # Fill available I/O devices with waiting processes
         while len([p for p in self.io_queue if p is not None]) < self.num_ios and self.wait_queue:
+            # Get next waiting process
             process = self.wait_queue.popleft()
             if process.state == "waiting":
                 # Find an available I/O device
                 for io_index in range(self.num_ios):
+                    # 
                     if self.io_queue[io_index] is None:
                         process.state = "io_waiting"
                         self.io_queue[io_index] = process
@@ -135,6 +141,7 @@ class SJFScheduler(Scheduler):
     
     def has_jobs(self):
         """Check if there are any jobs still being processed"""
+        # Returns True if there are jobs in any queue or running on CPUs/IOs
         return (len(self.ready_queue) > 0 or 
                 len(self.wait_queue) > 0 or 
                 any(p is not None for p in self.cpu_queue) or 
@@ -142,6 +149,7 @@ class SJFScheduler(Scheduler):
     
     def snapshot(self):
         """Return current state of all queues for visualization"""
+        # Returns a dictionary with the current state of the scheduler
         return {
             "clock": self.clock,
             "ready": [process.pid for process in self.ready_queue],
@@ -153,23 +161,29 @@ class SJFScheduler(Scheduler):
     
     def print_stats(self):
         """Print completion statistics"""
+        # If no processes have finished, print a message and return
         if not self.finished:
             print("No processes have completed.")
             return
         
+        # Print header
         print("\nSJF Scheduler Statistics:")
         print("-" * 60)
         
+        # Calculate totals for averages
         total_turnaround = sum(p.turnaround_time for p in self.finished)
         total_waiting = sum(p.wait_time for p in self.finished)
         
+        # Print table header
         print(f"{'Process':<8} {'Arrival':<8} {'Completion':<10} {'Turnaround':<10} {'Waiting':<10}")
         print("-" * 60)
         
+        # Print each process's stats
         for process in self.finished:
             print(f"{process.pid:<8} {process.arrival_time:<8} {process.end_time:<10} "
                   f"{process.turnaround_time:<10} {process.wait_time:<10}")
         
+        # Print averages
         print("-" * 60)
         print(f"Average Turnaround Time: {total_turnaround/len(self.finished):.2f}")
         print(f"Average Waiting Time:   {total_waiting/len(self.finished):.2f}")
@@ -177,12 +191,14 @@ class SJFScheduler(Scheduler):
     
     def export_json(self, filename):
         """Export simulation timeline to JSON file"""
+        # Prepare timeline data
         timeline_data = {
             "algorithm": "SJF",
             "total_time": self.clock,
             "processes": []
         }
         
+        # Add each finished process's data
         for process in self.finished:
             process_data = {
                 "pid": process.pid,
@@ -193,18 +209,21 @@ class SJFScheduler(Scheduler):
             }
             timeline_data["processes"].append(process_data)
         
-        import json
+        # Write to JSON file
         with open(filename, 'w') as f:
             json.dump(timeline_data, f, indent=2)
     
     def export_csv(self, filename):
         """Export simulation results to CSV file"""
-        import csv
+        # Export simulation results to CSV file
         with open(filename, 'w', newline='') as csvfile:
             fieldnames = ['pid', 'arrival_time', 'completion_time', 'turnaround_time', 'waiting_time']
             writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
             
+            # Write header
             writer.writeheader()
+
+            # Write each finished process's data to CSV
             for process in self.finished:
                 writer.writerow({
                     'pid': process.pid,
