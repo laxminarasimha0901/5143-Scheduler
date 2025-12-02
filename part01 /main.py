@@ -5,6 +5,8 @@ from schedulers.fcfs import FCFSScheduler
 from schedulers.round_robin import RRScheduler
 from schedulers.sjf import SJFScheduler
 from schedulers.srtf import SRTFScheduler
+from schedulers.priority import PriorityScheduler
+from schedulers.adaptive import AdaptiveScheduler
 from pkg import Process
 from visualizer import run_simulation_with_gantt
 
@@ -55,7 +57,11 @@ if __name__ == "__main__":
         "SJF": SJFScheduler,
         "SJFScheduler": SJFScheduler,
         "SRTF": SRTFScheduler,
-        "SRTFScheduler": SRTFScheduler
+        "SRTFScheduler": SRTFScheduler,
+        "Priority": PriorityScheduler,
+        "PriorityScheduler": PriorityScheduler,
+        "Adaptive": AdaptiveScheduler,
+        "AdaptiveScheduler": AdaptiveScheduler
     }
     
     SchedulerClass = scheduler_map.get(scheduler_class_name, RRScheduler)
