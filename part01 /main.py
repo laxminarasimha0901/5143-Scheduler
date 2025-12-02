@@ -69,11 +69,11 @@ if __name__ == "__main__":
         scheduler.add_process(p)
 
     # used for debugging
-    print(f"\nDebug info:")
-    print(f"Ready queue size: {len(scheduler.ready_queue)}")
-    print(f"Processes in ready queue: {[p.pid for p in scheduler.ready_queue]}")
-    print(f"Has jobs: {scheduler.has_jobs()}")
-    print(f"First few processes arrival times: {[p.arrival_time for p in list(scheduler.ready_queue)[:3]]}")
+    #print(f"\nDebug info:")
+    #print(f"Ready queue size: {len(scheduler.ready_queue)}")
+    #print(f"Processes in ready queue: {[p.pid for p in scheduler.ready_queue]}")
+    #print(f"Has jobs: {scheduler.has_jobs()}")
+    #print(f"First few processes arrival times: {[p.arrival_time for p in list(scheduler.ready_queue)[:3]]}")
 
     # Run simulation with Gantt chart visualization and timeline export
     output_filename = f"./timelines/timeline{file_num}.csv"

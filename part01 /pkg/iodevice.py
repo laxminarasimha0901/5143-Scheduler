@@ -33,18 +33,26 @@ class IODevice:
         """Advance the process on the IO device by one time unit"""
         if not self.current:
             return None
+    
         # Process the current burst
         burst = self.current.current_burst()
+    
         # If it's an I/O burst, decrement its duration
         if burst and "io" in burst:
             burst["io"]["duration"] -= 1
             self.current.io_time += 1  # Increment I/O time
-            # If the burst is done, advance to the next one (could be CPU or IO or done)
+            # If the burst is done, advance to the next one
             if burst["io"]["duration"] == 0:
                 self.current.advance_burst()  # Move to the next burst
                 finished_proc = self.current  # Save reference to finished process
                 self.current = None  # Free the IO device
                 return finished_proc  # Return the finished process
+        elif burst and "cpu" in burst:
+            # Current burst is CPU, not I/O - this shouldn't happen
+            # Process finished I/O and needs CPU now
+            finished_proc = self.current
+            self.current = None
+            return finished_proc
         return None
 
     def __repr__(self):

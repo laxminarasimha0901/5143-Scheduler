@@ -71,8 +71,8 @@ class GanttVisualizer:
         print("-" * 50)
         
         for interval in sorted(self.execution_intervals, key=lambda x: x['start_time']):
-            print(f"{interval['job_id']:<6} {interval['start_time']:<6} "
-                  f"{interval['end_time']:<6} {interval['duration']:<6} {interval['resource_type']:<6}")
+            job_id = interval['job_id'] if interval['job_id'] is not None else 'IDLE'
+            print(f"{job_id:<6} {interval['start_time']:<6} ")
         
         # Display timeline summary
         max_time = max(interval['end_time'] for interval in self.execution_intervals)
