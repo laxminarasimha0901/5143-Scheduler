@@ -144,11 +144,11 @@ class Scheduler:
     def snapshot(self):
         """Return current state for the visualizer"""
         return {
-        'time': self.clock.current_time,
+        'clock': self.clock.time,
         'ready_queue': [p.pid for p in self.ready_queue],
         'wait_queue': [p.pid for p in self.wait_queue],
-        'cpus': [cpu.current_process.pid if cpu.current_process else None for cpu in self.cpus],
-        'ios': [dev.current_process.pid if dev.current_process else None for dev in self.io_devices]
+        'cpu': [cpu.current.pid if cpu.current else None for cpu in self.cpus],
+        'ios': [dev.current.pid if dev.current else None for dev in self.io_devices]
     }
 
     def _callback(self, pid, new_state):

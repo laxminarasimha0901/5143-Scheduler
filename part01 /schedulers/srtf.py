@@ -2,7 +2,7 @@
 from pkg import Scheduler
 from collections import deque
 
-class SRTFScheduler:
+class SRTFScheduler(Scheduler):
     def __init__(self, num_cpus=1, num_ios=1, verbose=False):
         self.num_cpus = num_cpus
         self.num_ios = num_ios
@@ -15,7 +15,7 @@ class SRTFScheduler:
         self.io_queue = [None] * num_ios    # Processes on I/O devices
         self.finished = []                # Completed processes
         
-        self.clock = 0
+        #self.clock = 0
     
     def add_process(self, process):
         """Add a process to the ready queue"""

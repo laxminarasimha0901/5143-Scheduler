@@ -50,6 +50,10 @@ class Process:
             self.bursts.pop(0)
         # No return needed - modifies in place and current_burst() will reflect change
 
+    def is_complete(self):
+        """Check if all bursts have been completed"""
+        return len(self.bursts) == 0
+
     def __repr__(self):
         # return self.__str__()
         return f"{self.pid}"
