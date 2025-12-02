@@ -31,7 +31,7 @@ class RRScheduler(Scheduler):
     
     def step(self):
         """Execute one time step of the simulation"""
-        if self.clock.time % 10 == 0:  # Print every 10 time units
+        if self.clock.time % 1 == 0:  # Print every tick
             print(f"Time: {self.clock.time}")
             print(f"  Ready queue: {[p.pid for p in self.ready_queue]}")
             print(f"  Wait queue: {[p.pid for p in self.wait_queue]}")
