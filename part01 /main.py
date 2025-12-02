@@ -1,12 +1,11 @@
 # main.py
 import json
 import sys
-from pkg.process import Process
 from schedulers.fcfs import FCFSScheduler
 from schedulers.round_robin import RRScheduler
 from schedulers.sjf import SJFScheduler
-from schedulers.srjf import SRTFScheduler
-from pkg.process import Process
+from schedulers.srtf import SRTFScheduler
+from pkg import Process
 from visualizer import run_simulation_with_gantt
 
 def load_processes_from_json(filename, limit=None):
