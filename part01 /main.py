@@ -23,7 +23,7 @@ def load_processes_from_json(filename, limit=None):
             pid=p["pid"],
             bursts=bursts,
             priority=p["priority"],
-            arrival_time=p["arrival_time"],
+            arrival_time=p.get("arrival_time", 0),
             quantum=p.get("quantum", 4)
         )
         processes.append(proc)
