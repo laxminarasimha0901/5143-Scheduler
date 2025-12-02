@@ -42,6 +42,12 @@ class RRScheduler:
         
         # Dispatch waiting processes to available I/O devices
         self._dispatch_to_io_devices()
+
+    def has_jobs(self):
+        return (len(self.ready_queue) > 0 or 
+                len(self.wait_queue) > 0 or 
+                any(p is not None for p in self.cpu_queue) or 
+                any(p is not None for p in self.io_queue))
     
     def _handle_arrivals(self):
         """Move processes from new state to ready queue when they arrive"""
