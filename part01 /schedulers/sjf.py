@@ -1,5 +1,5 @@
 # schedulers/sjf.py
-
+from pkg import Scheduler
 from collections import deque
 
 class SJFScheduler:

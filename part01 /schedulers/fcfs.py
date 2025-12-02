@@ -1,5 +1,5 @@
 # schedulers/fcfs.py
-
+from pkg import Scheduler
 from collections import deque
 
 class FCFSScheduler:
