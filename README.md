@@ -30,8 +30,3 @@
 ##### In the end, I believe the two previous projects were good in teaching teamwork. I feel much more comfortable using github to collaborate, rather than just my own personal use. If I could do things differently, I would watch more videos as to how some of these algorithms worked in order to get a much greater understanding.
 #### Soma
 #### If I could redo this project, I’d manage my time properly, to skip the last-minute rush and add some unique feature to our shell. Clearly defined roles would’ve kept everyone on the same page, no confusion. Procrastinating on big tasks is my habit, but starting early would’ve been smarter. Late-night 9pm coding sessions killed my sleep. Next time, I’ll plan better and keep things chill.
-## References
-#### Our references used were as follows:
-#### 1. GeeksforGeeks
-#### 2. Stackoverflow (whoami)
-#### 3. Chatgpt
