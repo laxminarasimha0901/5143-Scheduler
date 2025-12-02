@@ -13,7 +13,7 @@
 #### Andrew
 ##### This was my first time actually implementing scheduling algorithms. All in all, I thought it was fun to see the data once we got it to run the way we wanted it to.
 #### Soma
-#### For me my low was, as a beginner to coding and making project was overwhelming and had kind of stress, how can I  make it work. But during the project I got to learn new topics and concepts of python. I have searched for the content online and watched some videos how the shell works and how each different command works as we go. But finally when the code was  working, it  gave a relief and high.
+#### As a first timer to implement the scheduing algos, I was excited to see how the scheduling algorithms work and how we can implement in different ways. After seeing the output we wanted to see the output, thought it was worth putting in efforts
 
 ### What was good and bad?
 #### Jadyn
@@ -21,7 +21,7 @@
 #### Andrew
 ##### In my opinion, this project was very good in giving a visual representation of how scheduling really works. Having not been entirely comfortable with these concepts, it's nice being able to actually visualize what was going on. However, it was very tedious work, and I proceeded to get very minute errors that frustrate me at times.
 #### Soma
-#### In my opinion, this project was a good as beginner to explore new things and learn new topics in python. And the team was always available whenever I had doubts and shared thoughts whenever I asked them during the development of this project. The bad thing about was we could have started a bit early and make sure everything was running smoothly and consistently. Some times we had conflicts with merging the code into repository. I, now understand that if we can start early we can improvise much more by utilising the time and make it more wonderful. 
+####My opinion is doing this assignment provides an idea how a scheduling algorithm works and how we can visualize the scheduling of jobs using different scheduling algorithms. i have theory knowledge of these topics but per coding and make them work is my first time.   
 
 ### What would we do differently?
 #### Jadyn
@@ -29,4 +29,4 @@
 #### Andrew
 ##### In the end, I believe the two previous projects were good in teaching teamwork. I feel much more comfortable using github to collaborate, rather than just my own personal use. If I could do things differently, I would watch more videos as to how some of these algorithms worked in order to get a much greater understanding.
 #### Soma
-#### If I could redo this project, I’d manage my time properly, to skip the last-minute rush and add some unique feature to our shell. Clearly defined roles would’ve kept everyone on the same page, no confusion. Procrastinating on big tasks is my habit, but starting early would’ve been smarter. Late-night 9pm coding sessions killed my sleep. Next time, I’ll plan better and keep things chill.
+####Finally, I believe the utilizing github and teaming up with other people tought me how we can work in teams and utilize time, working on projects was a good lessons on researching and finding out how the code works and how we can implement in different ways. If i could do things differently, i would definitely do more research and wacth videos and figureout how we can get better results. 
