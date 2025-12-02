@@ -153,8 +153,4 @@ class PriorityScheduler:
         print(f"Total Context Switches: 0 (FCFS is non-preemptive)")
         print(f"Total Simulation Time: {self.clock}")
 
-    def print_stats(self):
-        print("\nPriority Scheduler Statistics")
-        for p in self.finished:
-            print(f"{p.pid}: priority={p.priority}, arrival={p.arrival_time}, "
-                  f"end={p.end_time}, turnaround={p.turnaround_time}, wait={p.wait_time}")
+    

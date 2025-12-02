@@ -125,7 +125,26 @@ class AdaptiveScheduler:
         }
 
     def print_stats(self):
-        print("\nAdaptive Scheduler Statistics")
-        for p in self.finished:
-            print(f"{p.pid}: priority={p.priority}, arrival={p.arrival_time}, "
-                  f"end={p.end_time}, turnaround={p.turnaround_time}, wait={p.wait_time}")
+        """Print completion statistics"""
+        if not self.finished:
+            print("No processes have completed.")
+            return
+        
+        print("\nPriority Scheduler Statistics:")
+        print("-" * 60)
+        
+        total_turnaround = sum(p.turnaround_time for p in self.finished)
+        total_waiting = sum(p.wait_time for p in self.finished)
+        
+        print(f"{'Process':<8} {'Arrival':<8} {'Completion':<10} {'Turnaround':<10} {'Waiting':<10}")
+        print("-" * 60)
+        
+        for process in self.finished:
+            print(f"{process.pid:<8} {process.arrival_time:<8} {process.end_time:<10} "
+                  f"{process.turnaround_time:<10} {process.wait_time:<10}")
+        
+        print("-" * 60)
+        print(f"Average Turnaround Time: {total_turnaround/len(self.finished):.2f}")
+        print(f"Average Waiting Time:   {total_waiting/len(self.finished):.2f}")
+        print(f"Total Context Switches: 0 (FCFS is non-preemptive)")
+        print(f"Total Simulation Time: {self.clock}")
