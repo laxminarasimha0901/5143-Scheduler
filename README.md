@@ -9,7 +9,7 @@
 # Final Thoughts
 ### Highs and Lows
 #### Jadyn
-##### A low for me was realizing that I hardcoded the permissions instead of coding them to work simultaneously with the chmod. I coded the ls command before chmod and didn't take into account the changes that I needed to make to my code, until we were presenting in class. I'm glad I was able to get it fixed up and working. My high for this project was actually getting it done, and getting good feedback. I always have low expectations for myself when it comes to big projects like this, so I'm really proud of what I was able to accomplish.
+##### With this being my first time implementing scheduling algorithms, there was definitely a learning curve when it came to figuring out how to code everything. Furthermore, it was very exciting seeing our work come to fruition.
 #### Andrew
 ##### This was my first time actually implementing scheduling algorithms. All in all, I thought it was fun to see the data once we got it to run the way we wanted it to.
 #### Soma
@@ -17,7 +17,7 @@
 
 ### What was good and bad?
 #### Jadyn
-##### I'm fairly new to working with both Python and Codespaces, so it was really annoying trying to navigate the usage of both throughout this project. Sometimes, me and the rest of the group would be working on the project simultaneously, and it would cause us to get merge errors when we were committing changes. Although I have used GitHub before, I wasn't the most familiar with all of the features, so it took some time to get around the errors I got while merging or committing. I think the good thing about working on this project was learning how to work with a group of people on a program, and how to create a tool that is so prevelent in both the industry and day to day life. In the past, I have not had the best time working with groups, so this was probably the first time I haven't had to do a majority of the work. I appreciated them so much for taking the time to get things done.
+##### In my opinion, this assignment was very good in providing a better understanding of how scheduling works, especially with the visual representation that we created. I had a minimal idea of what scheduling did but this project furthered my understanding of the topic.
 #### Andrew
 ##### In my opinion, this project was very good in giving a visual representation of how scheduling really works. Having not been entirely comfortable with these concepts, it's nice being able to actually visualize what was going on. However, it was very tedious work, and I proceeded to get very minute errors that frustrate me at times.
 #### Soma
@@ -25,7 +25,7 @@
 
 ### What would we do differently?
 #### Jadyn
-##### If I were to do this project again, I would definitely make sure we managed our work with the amount of time we had. I'm a big procrastinator on bigger assignments like this, and even though I got my commands done on time, I could have spaced the work I did over those weeks we had. I think if I would have managed my time better, I could have possibly added more details to our shell that would make it more unique when compared to our peers.
+##### Through utilizing GitHub and collaborating with other programmers, I definitely feel more comfortable working with other people in group assignments. If I could do things differently, I would once again just manage my time a lot better. I'm in 6 classes right now and it just can become very stressful if I don't manage my time good. 
 #### Andrew
 ##### In the end, I believe the two previous projects were good in teaching teamwork. I feel much more comfortable using github to collaborate, rather than just my own personal use. If I could do things differently, I would watch more videos as to how some of these algorithms worked in order to get a much greater understanding.
 #### Soma
