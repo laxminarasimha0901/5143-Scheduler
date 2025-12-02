@@ -30,7 +30,12 @@ def load_processes_from_json(filename, limit=None):
     return processes
 
 if __name__ == "__main__":
-    args = {k: v for arg in sys.argv[1:] for k, v in [arg.split("=", 1)]} if len(sys.argv) > 1 else {}
+    #args = {k: v for arg in sys.argv[1:] for k, v in [arg.split("=", 1)]} if len(sys.argv) > 1 else {}
+    args = {}
+    for arg in sys.argv[1:]:
+        if "=" in arg:
+            k, v = arg.split("=", 1)
+            args[k] = v
     file_num = args.get("file_num", "1").zfill(4)
     limit = int(args["limit"]) if "limit" in args else None
     cpus = int(args.get("cpus", 1))
@@ -44,9 +49,13 @@ if __name__ == "__main__":
     # Map scheduler name to class
     scheduler_map = {
         "FCFS": FCFSScheduler,
+        "FCFSScheduler": FCFSScheduler,
         "RR": RRScheduler,
+        "RRScheduler": RRScheduler,
         "SJF": SJFScheduler,
-        "SRTF": SRTFScheduler
+        "SJFScheduler": SJFScheduler,
+        "SRTF": SRTFScheduler,
+        "SRTFScheduler": SRTFScheduler
     }
     
     SchedulerClass = scheduler_map.get(scheduler_class_name, RRScheduler)

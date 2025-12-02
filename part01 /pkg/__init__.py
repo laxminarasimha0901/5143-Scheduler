@@ -1,6 +1,6 @@
 from .clock import Clock
 from .cpu import CPU
-from .ioDevice import IODevice
+from .iodevice import IODevice
 from .scheduler import Scheduler
 from .process import Process
 
