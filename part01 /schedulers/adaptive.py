@@ -1,241 +1,290 @@
-# Adaptive Priority Scheduling Algorithm Implementation
+# Adaptive Scheduling Algorithm Implementation
 # schedulers/adaptive.py
+
+from pkg import Scheduler
 from collections import deque
 import json
 import csv
 
-class AdaptiveScheduler:
+class AdaptiveScheduler(Scheduler):
     """
-    Adaptive Priority Scheduler.
-    - Uses dynamic priority adjustment (aging).
-    - Every tick that a job waits => priority improves by 1.
-    - Prevents starvation, adapts to workload.
+    Adaptive Scheduling.
+    - Dynamically adjusts scheduling strategy based on system state
+    - Uses Round Robin for interactive processes
+    - Uses SJF for batch processes
+    - Adjusts quantum based on load
     """
-
-    def __init__(self, num_cpus=1, num_ios=1, verbose=False, aging_rate=1):
-        # Initialize scheduler parameters
+    
+    def __init__(self, num_cpus=1, num_ios=1, base_quantum=4, verbose=False):
         self.num_cpus = num_cpus
         self.num_ios = num_ios
+        self.base_quantum = base_quantum
         self.verbose = verbose
-        self.aging_rate = aging_rate
-
+        
         # Queues
-        # Ready processes
-        self.ready_queue = deque()
-        # Processes waiting for I/O
+        self.not_arrived = []
+        self.ready_queue = []
         self.wait_queue = deque()
-        # Currently running processes on each CPU
         self.cpu_queue = [None] * num_cpus
-        # Currently running processes on each I/O
         self.io_queue = [None] * num_ios
-        # Completed processes
         self.finished = []
-
-        # Simulation clock
-        #self.clock = 0
-
+        
+        # Track quantum for each CPU
+        self.quantum_remaining = {}
+        
+        # Adaptive parameters
+        self.current_quantum = base_quantum
+        self.load_history = []
+        
+        self.clock = 0
+    
     def add_process(self, process):
-        """Add process with initial priority."""
-        # Initialize process state
-        process.state = "new"
-        # Initialize wait time
-        process.wait_time = 0
-        # Ensure process has a priority attribute
-        if not hasattr(process, "priority"):
-            process.priority = 10  # default starting priority
-        self.ready_queue.append(process)
-
+        """Add a process to the not-arrived queue"""
+        self.not_arrived.append(process)
+        self.not_arrived.sort(key=lambda p: p.arrival_time)
+    
+    def _check_arrivals(self):
+        """Check for processes that have arrived and move them to ready queue"""
+        while self.not_arrived and self.not_arrived[0].arrival_time <= self.clock:
+            process = self.not_arrived.pop(0)
+            process.state = "ready"
+            self.ready_queue.append(process)
+            if self.verbose:
+                print(f"[Clock {self.clock}] Process {process.pid} arrived")
+    
+    def _adapt_quantum(self):
+        """Adjust quantum based on system load"""
+        load = len(self.ready_queue) + len([p for p in self.cpu_queue if p is not None])
+        self.load_history.append(load)
+        
+        # Keep last 10 measurements
+        if len(self.load_history) > 10:
+            self.load_history.pop(0)
+        
+        avg_load = sum(self.load_history) / len(self.load_history)
+        
+        # Adjust quantum: lower quantum for high load, higher for low load
+        if avg_load > 5:
+            self.current_quantum = max(2, self.base_quantum - 2)
+        elif avg_load < 2:
+            self.current_quantum = self.base_quantum + 2
+        else:
+            self.current_quantum = self.base_quantum
+    
+    def _classify_process(self, process):
+        """Classify process as CPU-bound or I/O-bound"""
+        if not hasattr(process, 'burst_history'):
+            return 'unknown'
+        
+        cpu_time = sum(t for t, type in process.burst_history if type == 'cpu')
+        io_time = sum(t for t, type in process.burst_history if type == 'io')
+        
+        if cpu_time > io_time * 2:
+            return 'cpu_bound'
+        elif io_time > cpu_time * 2:
+            return 'io_bound'
+        return 'balanced'
+    
+    def _sort_ready_queue(self):
+        """Sort ready queue adaptively based on process characteristics"""
+        # Prioritize I/O-bound processes (better for responsiveness)
+        # Then use burst time for CPU-bound processes
+        def priority_key(p):
+            classification = self._classify_process(p)
+            burst_time = p.get_current_burst_time() if hasattr(p, 'get_current_burst_time') else 0
+            
+            if classification == 'io_bound':
+                return (0, burst_time)  # Highest priority
+            elif classification == 'balanced':
+                return (1, burst_time)
+            else:  # cpu_bound
+                return (2, burst_time)  # Lowest priority
+        
+        self.ready_queue.sort(key=priority_key)
+    
     def step(self):
-        """Advance time by one tick."""
-        # Activate new arrivals
-        for p in self.ready_queue:
-            if p.state == "new" and p.arrival_time <= self.clock:
-                p.state = "ready"
-
-        # Aging: ready processes get higher priority the longer they wait
-        for p in self.ready_queue:
-            if p.state == "ready":
-                p.wait_time += 1
-                p.priority = max(1, p.priority - self.aging_rate)
-
-        # Process currently running jobs on CPUs
+        """Execute one time step of the simulation"""
+        self._check_arrivals()
+        self._adapt_quantum()
         self._process_cpus()
-        # Process currently running jobs on I/O devices
-        self._process_io()
-
-        # Dispatch ready processes to available CPUs
+        self._process_io_devices()
         self._dispatch_to_cpus()
-        # Dispatch waiting processes to available I/O devices
-        self._dispatch_to_io()
-
-        # Increment clock
+        self._dispatch_to_io_devices()
         self.clock += 1
-
+    
     def _process_cpus(self):
-        """Advance CPU bursts."""
-        # Find an available CPU
-        for i in range(self.num_cpus):
-            proc = self.cpu_queue[i]
-            if proc:
-                # Advance the current CPU burst
-                done = proc.advance_burst()
-                if done:
-                    # Burst completed
-                    self.cpu_queue[i] = None
-                    if proc.is_complete():
-                        # Process is completely finished
-                        proc.state = "finished"
-                        proc.end_time = self.clock
-                        proc.turnaround_time = proc.end_time - proc.arrival_time
-                        self.finished.append(proc)
+        """Process currently running jobs on all CPUs"""
+        for cpu_index in range(self.num_cpus):
+            current_process = self.cpu_queue[cpu_index]
+            if current_process is not None:
+                # Decrement quantum
+                if cpu_index in self.quantum_remaining:
+                    self.quantum_remaining[cpu_index] -= 1
+                
+                # Track burst history
+                if not hasattr(current_process, 'burst_history'):
+                    current_process.burst_history = []
+                
+                burst_completed = current_process.advance_burst()
+                quantum_expired = cpu_index in self.quantum_remaining and self.quantum_remaining[cpu_index] <= 0
+                
+                if burst_completed:
+                    self.cpu_queue[cpu_index] = None
+                    if cpu_index in self.quantum_remaining:
+                        del self.quantum_remaining[cpu_index]
+                    
+                    if current_process.is_complete():
+                        current_process.state = "finished"
+                        current_process.end_time = self.clock
+                        current_process.turnaround_time = self.clock - current_process.arrival_time
+                        self.finished.append(current_process)
+                        if self.verbose:
+                            print(f"[Clock {self.clock}] Process {current_process.pid} finished")
                     else:
-                        # Next burst is IO, move to wait queue
-                        proc.state = "waiting"
-                        self.wait_queue.append(proc)
-
-    def _process_io(self):
-        """Advance IO bursts."""
-        # Find an available I/O device
-        for i in range(self.num_ios):
-            proc = self.io_queue[i]
-            # If there is a process on this I/O device
-            if proc:
-                # Advance the current I/O burst
-                done = proc.advance_burst()
-                # If the burst is complete
-                if done:
-                    # I/O burst completed
-                    self.io_queue[i] = None
-
-                    # If process is complete
-                    if proc.is_complete():
-                        # Process is completely finished
-                        proc.state = "finished"
-                        proc.end_time = self.clock
-                        proc.turnaround_time = proc.end_time - proc.arrival_time
-                        self.finished.append(proc)
+                        current_process.state = "waiting"
+                        self.wait_queue.append(current_process)
+                
+                elif quantum_expired:
+                    # Quantum expired - preempt
+                    self.cpu_queue[cpu_index] = None
+                    del self.quantum_remaining[cpu_index]
+                    current_process.state = "ready"
+                    self.ready_queue.append(current_process)
+                    if self.verbose:
+                        print(f"[Clock {self.clock}] Process {current_process.pid} preempted")
+    
+    def _process_io_devices(self):
+        """Process currently running jobs on all I/O devices"""
+        for io_index in range(self.num_ios):
+            current_process = self.io_queue[io_index]
+            if current_process is not None:
+                burst_completed = current_process.advance_burst()
+                
+                if burst_completed:
+                    self.io_queue[io_index] = None
+                    
+                    if current_process.is_complete():
+                        current_process.state = "finished"
+                        current_process.end_time = self.clock
+                        current_process.turnaround_time = self.clock - current_process.arrival_time
+                        self.finished.append(current_process)
+                        if self.verbose:
+                            print(f"[Clock {self.clock}] Process {current_process.pid} finished")
                     else:
-                        # Next burst is CPU, move to ready queue
-                        proc.state = "ready"
-                        self.ready_queue.append(proc)
-
+                        current_process.state = "ready"
+                        self.ready_queue.append(current_process)
+    
     def _dispatch_to_cpus(self):
-        """Select highest aged priority."""
-        # Get list of ready processes sorted by priority
-        ready = [p for p in self.ready_queue if p.state == "ready"]
-        ready.sort(key=lambda p: p.priority)  # smaller = higher priority
-
-        # Find an available CPU
-        for i in range(self.num_cpus):
-            # Assign highest-priority process to CPU
-            if self.cpu_queue[i] is None and ready:
-                proc = ready.pop(0)
-                self.ready_queue.remove(proc)
-                proc.state = "running"
-                self.cpu_queue[i] = proc
-
-    def _dispatch_to_io(self):
-        """Assign IO-waiting jobs to devices"""
-        # Find an available I/O device
-        for i in range(self.num_ios):
-            if self.io_queue[i] is None and self.wait_queue:
-                proc = self.wait_queue.popleft()
-                proc.state = "io_waiting"
-                self.io_queue[i] = proc
-
+        """Dispatch ready processes to available CPUs adaptively"""
+        self._sort_ready_queue()
+        
+        while len([p for p in self.cpu_queue if p is not None]) < self.num_cpus and self.ready_queue:
+            process = self.ready_queue.pop(0)
+            if process.state == "ready":
+                for cpu_index in range(self.num_cpus):
+                    if self.cpu_queue[cpu_index] is None:
+                        process.state = "running"
+                        if not hasattr(process, 'first_run_time'):
+                            process.first_run_time = self.clock
+                        self.cpu_queue[cpu_index] = process
+                        self.quantum_remaining[cpu_index] = self.current_quantum
+                        if self.verbose:
+                            print(f"[Clock {self.clock}] Process {process.pid} dispatched to CPU {cpu_index} (quantum: {self.current_quantum})")
+                        break
+    
+    def _dispatch_to_io_devices(self):
+        """Dispatch waiting processes to available I/O devices"""
+        while len([p for p in self.io_queue if p is not None]) < self.num_ios and self.wait_queue:
+            process = self.wait_queue.popleft()
+            if process.state == "waiting":
+                for io_index in range(self.num_ios):
+                    if self.io_queue[io_index] is None:
+                        process.state = "io_waiting"
+                        self.io_queue[io_index] = process
+                        if self.verbose:
+                            print(f"[Clock {self.clock}] Process {process.pid} dispatched to I/O {io_index}")
+                        break
+    
     def has_jobs(self):
         """Check if there are any jobs still being processed"""
-        # Returns True if any CPU or I/O is busy, or if there are processes in ready or wait queues
-        return (
-            any(self.cpu_queue) or any(self.io_queue)
-            or len(self.ready_queue) > 0 or len(self.wait_queue) > 0
-        )
-
+        return (len(self.not_arrived) > 0 or
+                len(self.ready_queue) > 0 or 
+                len(self.wait_queue) > 0 or 
+                any(p is not None for p in self.cpu_queue) or 
+                any(p is not None for p in self.io_queue))
+    
     def snapshot(self):
         """Return current state of all queues for visualization"""
-        # Returns a dictionary with the current state of the scheduler
         return {
             "clock": self.clock,
-            "ready": [[p.pid, p.priority] for p in self.ready_queue],
-            "wait": [p.pid for p in self.wait_queue],
-            "cpu": [p.pid if p else None for p in self.cpu_queue],
-            "io": [p.pid if p else None for p in self.io_queue],
-            "finished": [p.pid for p in self.finished]
+            "not_arrived": [process.pid for process in self.not_arrived],
+            "ready": [process.pid for process in self.ready_queue],
+            "wait": [process.pid for process in self.wait_queue],
+            "cpu": [process.pid if process is not None else None for process in self.cpu_queue],
+            "io": [process.pid if process is not None else None for process in self.io_queue],
+            "finished": [process.pid for process in self.finished],
+            "current_quantum": self.current_quantum
         }
-
-
+    
     def print_stats(self):
         """Print completion statistics"""
-        # If no processes have finished, print a message and return
         if not self.finished:
             print("No processes have completed.")
             return
         
-        # Print header
         print("\nAdaptive Scheduler Statistics:")
+        print(f"Base Quantum: {self.base_quantum}, Final Quantum: {self.current_quantum}")
         print("-" * 60)
         
-        # Calculate totals for averages
         total_turnaround = sum(p.turnaround_time for p in self.finished)
         total_waiting = sum(p.wait_time for p in self.finished)
         
-        # Print per-process statistics
         print(f"{'Process':<8} {'Arrival':<8} {'Completion':<10} {'Turnaround':<10} {'Waiting':<10}")
         print("-" * 60)
         
-        # Print each process's stats
         for process in self.finished:
             print(f"{process.pid:<8} {process.arrival_time:<8} {process.end_time:<10} "
                   f"{process.turnaround_time:<10} {process.wait_time:<10}")
         
-        # Print averages
         print("-" * 60)
         print(f"Average Turnaround Time: {total_turnaround/len(self.finished):.2f}")
         print(f"Average Waiting Time:   {total_waiting/len(self.finished):.2f}")
-        print(f"Total Context Switches: 0 ")
         print(f"Total Simulation Time: {self.clock}")
-
+    
     def export_json(self, filename):
-        """Export finished processes to JSON file."""
-        # Prepare timeline data
+        """Export simulation timeline to JSON file"""
         timeline_data = {
-            "algorithm": "Priority",
+            "algorithm": "Adaptive",
+            "base_quantum": self.base_quantum,
             "total_time": self.clock,
             "processes": []
         }
         
-        # Add each finished process's data
         for process in self.finished:
             process_data = {
                 "pid": process.pid,
                 "arrival_time": process.arrival_time,
-                "end_time": process.end_time,
+                "completion_time": process.end_time,
                 "turnaround_time": process.turnaround_time,
-                "wait_time": process.wait_time,
-                "priority": process.priority
+                "waiting_time": process.wait_time
             }
             timeline_data["processes"].append(process_data)
-
-        # Write to JSON file
+        
         with open(filename, 'w') as f:
-            json.dump(timeline_data, f, indent=4)
-
+            json.dump(timeline_data, f, indent=2)
+    
     def export_csv(self, filename):
         """Export simulation results to CSV file"""
-        # Write process statistics to CSV
         with open(filename, 'w', newline='') as csvfile:
-            fieldnames = ['pid', 'arrival_time', 'completion_time', 'turnaround_time', 'waiting_time', 'priority']
+            fieldnames = ['pid', 'arrival_time', 'completion_time', 'turnaround_time', 'waiting_time']
             writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
             
             writer.writeheader()
-
-            # Write each finished process's data
             for process in self.finished:
                 writer.writerow({
                     'pid': process.pid,
                     'arrival_time': process.arrival_time,
                     'completion_time': process.end_time,
                     'turnaround_time': process.turnaround_time,
-                    'waiting_time': process.wait_time,
-                    'priority': process.priority
+                    'waiting_time': process.wait_time
                 })

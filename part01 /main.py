@@ -151,6 +151,15 @@ if __name__ == "__main__":
     print(f"Arrival strategy: {arrival_strategy}")
     print(f"Processes loaded: {len(processes)}")
     print(f"CPUs: {cpus}, I/O devices: {ios}")
+    
+    # Check if any processes were loaded
+    if len(processes) == 0:
+        print("\nError: No processes loaded!")
+        if heavy:
+            print(f"No processes matched the '{heavy}-heavy' filter.")
+            print("Try running without the heavy parameter or with a different filter (cpu/io/mixed).")
+        sys.exit(1)
+    
     print(f"Arrival time range: {min(p.arrival_time for p in processes)} - {max(p.arrival_time for p in processes)}")
     
     scheduler = SchedulerClass(num_cpus=cpus, num_ios=ios, verbose=False)

@@ -10,37 +10,46 @@ class FCFSScheduler(Scheduler):
     """
     First-Come, First-Served (FCFS) Scheduling.
     - The job that arrives first is served first.
-    - Non-preemptive: once a job starts executing, it runs to completion of its
+    - Non-preemptive: once a job starts executing, it runs to completion of its burst
     """
     
     def __init__(self, num_cpus=1, num_ios=1, verbose=False):
-        # Initialize scheduler parametersp
+        # Initialize scheduler parameters
         self.num_cpus = num_cpus
         self.num_ios = num_ios
         self.verbose = verbose
         
         # Queues
-        # Ready processes (maintained in arrival order)
-        self.ready_queue = deque()     
-        # Processes waiting for I/O 
-        self.wait_queue = deque()      
-        # Currently running processes on each CPU
-        self.cpu_queue = [None] * num_cpus
-        # Currently running processes on each I/O device
-        self.io_queue = [None] * num_ios
-        # Completed processes
-        self.finished = []              
+        self.not_arrived = []          # Processes that haven't arrived yet
+        self.ready_queue = deque()     # Ready processes (maintained in arrival order)
+        self.wait_queue = deque()      # Processes waiting for I/O 
+        self.cpu_queue = [None] * num_cpus  # Currently running processes on each CPU
+        self.io_queue = [None] * num_ios    # Currently running processes on each I/O device
+        self.finished = []              # Completed processes
         
-        #self.clock = 0
+        self.clock = 0  # FIXED: Uncommented and initialized
     
     def add_process(self, process):
-        """Add a process to the ready queue"""
-        self.ready_queue.append(process)
+        """Add a process to the not-arrived queue (will be moved to ready when it arrives)"""
+        # FIXED: Don't add directly to ready queue - wait for arrival time
+        self.not_arrived.append(process)
+        # Sort by arrival time to maintain order
+        self.not_arrived.sort(key=lambda p: p.arrival_time)
+    
+    def _check_arrivals(self):
+        """Check for processes that have arrived and move them to ready queue"""
+        # FIXED: New method to handle process arrivals
+        while self.not_arrived and self.not_arrived[0].arrival_time <= self.clock:
+            process = self.not_arrived.pop(0)
+            process.state = "ready"
+            self.ready_queue.append(process)
+            if self.verbose:
+                print(f"[Clock {self.clock}] Process {process.pid} arrived")
     
     def step(self):
         """Execute one time step of the simulation"""
-        # Increment clock
-        self.clock += 1
+        # FIXED: Check for new arrivals FIRST before processing
+        self._check_arrivals()
         
         # Process currently running jobs on CPUs
         self._process_cpus()
@@ -53,6 +62,9 @@ class FCFSScheduler(Scheduler):
         
         # Dispatch waiting processes to available I/O devices
         self._dispatch_to_io_devices()
+        
+        # Increment clock at the end
+        self.clock += 1
     
     def _process_cpus(self):
         """Process currently running jobs on all CPUs"""
@@ -74,6 +86,8 @@ class FCFSScheduler(Scheduler):
                         current_process.end_time = self.clock
                         current_process.turnaround_time = self.clock - current_process.arrival_time
                         self.finished.append(current_process)
+                        if self.verbose:
+                            print(f"[Clock {self.clock}] Process {current_process.pid} finished")
                     else:
                         # Next burst is I/O, move to wait queue
                         current_process.state = "waiting"
@@ -100,6 +114,8 @@ class FCFSScheduler(Scheduler):
                         current_process.end_time = self.clock
                         current_process.turnaround_time = self.clock - current_process.arrival_time
                         self.finished.append(current_process)
+                        if self.verbose:
+                            print(f"[Clock {self.clock}] Process {current_process.pid} finished")
                     else:
                         # Next burst is CPU, move back to ready queue
                         current_process.state = "ready"
@@ -118,7 +134,12 @@ class FCFSScheduler(Scheduler):
                     if self.cpu_queue[cpu_index] is None:
                         # Assign process to CPU
                         process.state = "running"
+                        # FIXED: Track when process first starts running (for wait time calculation)
+                        if not hasattr(process, 'first_run_time'):
+                            process.first_run_time = self.clock
                         self.cpu_queue[cpu_index] = process
+                        if self.verbose:
+                            print(f"[Clock {self.clock}] Process {process.pid} dispatched to CPU {cpu_index}")
                         break
     
     def _dispatch_to_io_devices(self):
@@ -131,12 +152,15 @@ class FCFSScheduler(Scheduler):
                     if self.io_queue[io_index] is None:
                         process.state = "io_waiting"
                         self.io_queue[io_index] = process
+                        if self.verbose:
+                            print(f"[Clock {self.clock}] Process {process.pid} dispatched to I/O {io_index}")
                         break
     
     def has_jobs(self):
         """Check if there are any jobs still being processed"""
-        # Returns True if there are jobs in any queue or running on CPUs/IOs
-        return (len(self.ready_queue) > 0 or 
+        # FIXED: Also check not_arrived queue
+        return (len(self.not_arrived) > 0 or
+                len(self.ready_queue) > 0 or 
                 len(self.wait_queue) > 0 or 
                 any(p is not None for p in self.cpu_queue) or 
                 any(p is not None for p in self.io_queue))
@@ -146,6 +170,7 @@ class FCFSScheduler(Scheduler):
         # Return a dictionary with the current state of the scheduler
         return {
             "clock": self.clock,
+            "not_arrived": [process.pid for process in self.not_arrived],
             "ready": [process.pid for process in self.ready_queue],
             "wait": [process.pid for process in self.wait_queue],
             "cpu": [process.pid if process is not None else None for process in self.cpu_queue],
@@ -227,3 +252,4 @@ class FCFSScheduler(Scheduler):
                     'turnaround_time': process.turnaround_time,
                     'waiting_time': process.wait_time
                 })
+                
