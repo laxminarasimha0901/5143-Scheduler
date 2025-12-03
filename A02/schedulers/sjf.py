@@ -46,7 +46,13 @@ class SJFScheduler(Scheduler):
     
     def _sort_ready_queue(self):
         """Sort ready queue by shortest burst time first"""
-        self.ready_queue.sort(key=lambda p: p.get_current_burst_time() if p.get_current_burst_time() else float('inf'))
+        def get_burst_time(p):
+            burst = p.current_burst()
+            if burst and isinstance(burst, dict) and 'cpu' in burst:
+                return burst['cpu']
+            return float('inf')
+        
+        self.ready_queue.sort(key=get_burst_time)
     
     def step(self):
         """Execute one time step of the simulation"""
@@ -113,7 +119,9 @@ class SJFScheduler(Scheduler):
                             process.first_run_time = self.clock
                         self.cpu_queue[cpu_index] = process
                         if self.verbose:
-                            print(f"[Clock {self.clock}] Process {process.pid} dispatched to CPU {cpu_index} (burst: {process.get_current_burst_time()})")
+                            burst = process.current_burst()
+                            burst_time = burst['cpu'] if burst and 'cpu' in burst else 0
+                            print(f"[Clock {self.clock}] Process {process.pid} dispatched to CPU {cpu_index} (burst: {burst_time})")
                         break
     
     def _dispatch_to_io_devices(self):

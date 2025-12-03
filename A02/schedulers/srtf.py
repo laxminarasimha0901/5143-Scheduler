@@ -47,9 +47,16 @@ class SRTFScheduler(Scheduler):
         """Get the remaining time for the current burst"""
         if process is None:
             return float('inf')
-        burst = process.get_current_burst()
-        if burst and 'cpu' in burst:
+        
+        # Get current burst
+        burst = process.current_burst()
+        if burst is None:
+            return float('inf')
+        
+        # Check if it's a CPU burst and return remaining time
+        if isinstance(burst, dict) and 'cpu' in burst:
             return burst['cpu'] - process.time_in_burst
+        
         return float('inf')
     
     def _sort_ready_queue(self):

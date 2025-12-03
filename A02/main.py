@@ -9,7 +9,16 @@ from schedulers.srtf import SRTFScheduler
 from schedulers.priority import PriorityScheduler
 from schedulers.adaptive import AdaptiveScheduler
 from pkg import Process
-from visualizer import run_simulation_with_gantt
+
+# Import pygame visualizer
+try:
+    from pygame_visualizer import run_pygame_visualization
+    PYGAME_AVAILABLE = True
+except ImportError as e:
+    PYGAME_AVAILABLE = False
+    print(f"Error: pygame visualizer not available. Error: {e}")
+    print("Make sure pygame_visualizer.py exists and pygame is installed.")
+    run_pygame_visualization = None
 
 def load_processes_from_json(filename, limit=None, heavy=None, arrival_strategy="staggered"):
     with open(filename) as f:
@@ -101,6 +110,7 @@ if __name__ == "__main__":
     heavy = args.get("heavy")  # Get the heavy parameter
     arrival_strategy = args.get("arrival", "staggered")  # Get arrival time strategy
     seed = args.get("seed")  # Optional random seed for reproducibility
+    fps = int(args.get("fps", "2"))  # Frames per second for pygame
     
     # Set random seed if provided
     if seed:
@@ -127,23 +137,25 @@ if __name__ == "__main__":
     # Default scheduler (can be overridden by command line argument)
     scheduler_class_name = args.get("scheduler", "RRScheduler")
     
-    # Map scheduler name to class
+    # Map scheduler name to class (case-insensitive)
     scheduler_map = {
-        "FCFS": FCFSScheduler,
-        "FCFSScheduler": FCFSScheduler,
-        "RR": RRScheduler,
-        "RRScheduler": RRScheduler,
-        "SJF": SJFScheduler,
-        "SJFScheduler": SJFScheduler,
-        "SRTF": SRTFScheduler,
-        "SRTFScheduler": SRTFScheduler,
-        "Priority": PriorityScheduler,
-        "PriorityScheduler": PriorityScheduler,
-        "Adaptive": AdaptiveScheduler,
-        "AdaptiveScheduler": AdaptiveScheduler
+        "fcfs": FCFSScheduler,
+        "fcfsscheduler": FCFSScheduler,
+        "rr": RRScheduler,
+        "rrscheduler": RRScheduler,
+        "roundrobin": RRScheduler,
+        "sjf": SJFScheduler,
+        "sjfscheduler": SJFScheduler,
+        "srtf": SRTFScheduler,
+        "srtfscheduler": SRTFScheduler,
+        "priority": PriorityScheduler,
+        "priorityscheduler": PriorityScheduler,
+        "adaptive": AdaptiveScheduler,
+        "adaptivescheduler": AdaptiveScheduler
     }
     
-    SchedulerClass = scheduler_map.get(scheduler_class_name, RRScheduler)
+    # Convert to lowercase for case-insensitive matching
+    SchedulerClass = scheduler_map.get(scheduler_class_name.lower(), RRScheduler)
     
     print(f"Running simulation with {SchedulerClass.__name__}")
     if heavy:
@@ -162,9 +174,28 @@ if __name__ == "__main__":
     
     print(f"Arrival time range: {min(p.arrival_time for p in processes)} - {max(p.arrival_time for p in processes)}")
     
+    # Debug: Print first few processes and their arrival times BEFORE adding to scheduler
+    print(f"\nFirst 10 processes arrival times (before adding to scheduler):")
+    for i, p in enumerate(processes[:10]):
+        print(f"  PID {p.pid}: arrival_time={p.arrival_time}, bursts={len(p.bursts)}")
+    
     scheduler = SchedulerClass(num_cpus=cpus, num_ios=ios, verbose=False)
     for p in processes:
         scheduler.add_process(p)
+    
+    # Check if scheduler has a clock attribute (indicates it handles arrivals properly)
+    if hasattr(scheduler, 'clock'):
+        print(f"\nScheduler initialized with clock at: {scheduler.clock}")
+    else:
+        print(f"\nWARNING: Scheduler does not have a 'clock' attribute.")
+        print(f"This scheduler may not properly handle arrival times!")
+    
+    # Check the ready queue after adding processes
+    if hasattr(scheduler, 'ready_queue'):
+        print(f"Ready queue size after adding all processes: {len(scheduler.ready_queue)}")
+        if len(scheduler.ready_queue) > 0:
+            print(f"WARNING: All {len(scheduler.ready_queue)} processes are in ready queue immediately!")
+            print(f"This means arrival times are being IGNORED by the scheduler.")
     
     # used for debugging
     #print(f"\nDebug info:")
@@ -173,9 +204,26 @@ if __name__ == "__main__":
     #print(f"Has jobs: {scheduler.has_jobs()}")
     #print(f"First few processes arrival times: {[p.arrival_time for p in list(scheduler.ready_queue)[:3]]}")
     
-    # Run simulation with Gantt chart visualization and timeline export
-    output_filename = f"./timelines/timeline{file_num}.csv"
-    visualizer = run_simulation_with_gantt(scheduler, output_filename)
+    # Run simulation with Pygame visualization
+    print(f"\nStarting simulation...")
+    print(f"Total processes to simulate: {len(processes)}")
+    
+    if not PYGAME_AVAILABLE:
+        print("ERROR: Pygame visualizer not available!")
+        print("Please ensure:")
+        print("  1. pygame is installed: pip install pygame")
+        print("  2. pygame_visualizer.py exists in the same directory")
+        sys.exit(1)
+    
+    print(f"Running PYGAME visual simulation at {fps} FPS...")
+    print("Controls: SPACE=Pause, S=Step, UP/DOWN=Speed, Q=Quit")
+    
+    try:
+        run_pygame_visualization(scheduler, fps=fps)
+    except Exception as e:
+        print(f"\nError during pygame simulation: {e}")
+        import traceback
+        traceback.print_exc()
     
     # Print final statistics
     print("\n" + "="*60)
@@ -186,6 +234,5 @@ if __name__ == "__main__":
     # Export timeline data
     scheduler.export_json(f"./timelines/timeline{file_num}.json")
     
-    print(f"Timeline data exported to:")
-    print(f"  CSV: {output_filename}")
+    print(f"\nTimeline data exported to:")
     print(f"  JSON: ./timelines/timeline{file_num}.json")

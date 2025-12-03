@@ -3,8 +3,6 @@ import pygame
 import sys
 from collections import defaultdict
 
-# Add all the pygame visualization code here...
-
 # Color scheme
 COLORS = {
     'background': (20, 20, 30),
@@ -109,13 +107,12 @@ class PygameVisualizer:
             
             if process is not None:
                 self.draw_process_box(process.pid, px, py, box_width, box_height, 'running')
-                # Show remaining burst time if available
-                if hasattr(process, 'get_current_burst'):
-                    burst = process.get_current_burst()
-                    if burst and 'cpu' in burst:
-                        remaining = burst['cpu'] - process.time_in_burst
-                        self.draw_text(f"T:{remaining}", px + 5, py + box_height + 2, 
-                                     color=COLORS['text'], font=self.font_small)
+                # Show remaining burst time
+                burst = process.current_burst()
+                if burst and 'cpu' in burst:
+                    remaining = burst['cpu'] - process.time_in_burst
+                    self.draw_text(f"T:{remaining}", px + 5, py + box_height + 2, 
+                                 color=COLORS['text'], font=self.font_small)
             else:
                 self.draw_process_box(None, px, py, box_width, box_height, 'panel')
         
@@ -130,13 +127,12 @@ class PygameVisualizer:
             
             if process is not None:
                 self.draw_process_box(process.pid, px, py, box_width, box_height, 'io_waiting')
-                # Show remaining burst time if available
-                if hasattr(process, 'get_current_burst'):
-                    burst = process.get_current_burst()
-                    if burst and 'io' in burst:
-                        remaining = burst['io']['duration'] - process.time_in_burst
-                        self.draw_text(f"T:{remaining}", px + 5, py + box_height + 2,
-                                     color=COLORS['text'], font=self.font_small)
+                # Show remaining burst time
+                burst = process.current_burst()
+                if burst and 'io' in burst:
+                    remaining = burst['io']['duration'] - process.time_in_burst
+                    self.draw_text(f"T:{remaining}", px + 5, py + box_height + 2,
+                                 color=COLORS['text'], font=self.font_small)
             else:
                 self.draw_process_box(None, px, py, box_width, box_height, 'panel')
     
@@ -397,3 +393,4 @@ if __name__ == "__main__":
     
     scheduler = Scheduler(jobs, cpu_max=2, io_max=2, quantum=3)
     run_pygame_visualization(scheduler, fps=2)
+    

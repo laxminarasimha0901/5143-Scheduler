@@ -1,4 +1,5 @@
-# ---------------------------------------
+# process.py
+
 class Process:
     """
     Represents a process with CPU and I/O bursts
@@ -9,7 +10,7 @@ class Process:
         state: current state ("new", "ready", "running", "waiting", "finished")
     Methods:
         current_burst(): returns the current burst or None if done
-        advance_burst(): moves to the next burst
+        advance_burst(): advances the burst by one time unit, returns True if burst completed
         __repr__(): string representation for debugging
         __str__(): user-friendly string representation
     """
@@ -22,6 +23,10 @@ class Process:
         self.arrival_time = arrival_time
         self.quantum = quantum
         self.state = "new"
+        
+        # Track progress within current burst
+        self.current_burst_index = 0
+        self.time_in_burst = 0
 
         self.wait_time = 0  # Total time spent waiting in wait queue or ready queue
         self.turnaround_time = 0  # Total time from arrival to completion
@@ -40,26 +45,47 @@ class Process:
 
     def current_burst(self):
         """Get the current burst"""
-        # Return the first burst if it exists, else None
-        return self.bursts[0] if self.bursts else None
+        if self.current_burst_index < len(self.bursts):
+            return self.bursts[self.current_burst_index]
+        return None
 
     def advance_burst(self):
-        """Move to the next burst"""
-        if self.bursts:
-            # Remove the first burst
-            self.bursts.pop(0)
-        # No return needed - modifies in place and current_burst() will reflect change
+        """
+        Advance the current burst by one time unit
+        Returns True if the burst is completed, False otherwise
+        """
+        if self.current_burst_index >= len(self.bursts):
+            return False
+        
+        burst = self.bursts[self.current_burst_index]
+        self.time_in_burst += 1
+        
+        # Check if burst is complete
+        burst_complete = False
+        if "cpu" in burst:
+            if self.time_in_burst >= burst["cpu"]:
+                burst_complete = True
+                self.runtime += burst["cpu"]
+        elif "io" in burst:
+            if self.time_in_burst >= burst["io"]["duration"]:
+                burst_complete = True
+                self.io_time += burst["io"]["duration"]
+        
+        # Move to next burst if current one is complete
+        if burst_complete:
+            self.current_burst_index += 1
+            self.time_in_burst = 0
+            return True
+        
+        return False
 
     def is_complete(self):
         """Check if all bursts have been completed"""
-        return len(self.bursts) == 0
+        return self.current_burst_index >= len(self.bursts)
 
     def __repr__(self):
-        # return self.__str__()
         return f"{self.pid}"
 
     def __str__(self):
         return f"Process[pid:{self.pid}, priority:{self.priority}, runtime:{self.runtime}, io_time:{self.io_time}, start_time:{self.start_time}]"
-        # return self.__repr__()
-
-
+        
