@@ -63,6 +63,10 @@ class Scheduler:
         """
 
         process.state = "ready"  # sets the current process state to ready
+        
+        # Track first time entering ready queue (for wait time calculation)
+        if not hasattr(process, 'first_ready_time'):
+            process.first_ready_time = self.clock.now()
 
         # adds the process to the end of the ready queue
         self.ready_queue.append(process)
@@ -270,6 +274,10 @@ class Scheduler:
 
                 # Pop process from left of ready queue
                 proc = self.ready_queue.popleft()
+                
+                # Track first dispatch time (when process first gets CPU)
+                if not hasattr(proc, 'first_dispatch_time'):
+                    proc.first_dispatch_time = self.clock.now()
 
                 # Assign process to CPU
                 cpu.assign(proc)
@@ -298,6 +306,15 @@ class Scheduler:
         if self.verbose:
             self._snapshot()
         self.clock.tick()
+    
+    def has_jobs(self):
+        """Check if there are any jobs left to process (for visualizer compatibility)"""
+        return (
+            self.ready_queue
+            or self.wait_queue
+            or any(cpu.is_busy() for cpu in self.cpus)
+            or any(dev.is_busy() for dev in self.io_devices)
+        )
 
     def run(self):
         """
@@ -307,12 +324,7 @@ class Scheduler:
 
         # Continue stepping while there are processes in ready/wait queues
         # or any CPU/IO device is busy
-        while (
-            self.ready_queue
-            or self.wait_queue
-            or any(cpu.is_busy() for cpu in self.cpus)
-            or any(dev.is_busy() for dev in self.io_devices)
-        ):
+        while self.has_jobs():
             self.step()
 
     def timeline(self):
@@ -348,43 +360,91 @@ class Scheduler:
 
     def print_stats(self):
         """Print statistics for all finished processes"""
-        print("\n--- Process Statistics ---")
+        if not self.finished:
+            print("\nNo processes have completed yet.")
+            return
+            
+        print("\n" + "="*80)
+        print("PROCESS STATISTICS")
+        print("="*80)
+        
+        # Calculate totals for averages
+        total_wait_time = 0
+        total_turnaround_time = 0
+        total_response_time = 0
+        
         raw_data = []
         for p in self.finished:
+            # Calculate actual wait time: time from arrival to first dispatch
+            actual_wait_time = 0
+            if hasattr(p, 'first_dispatch_time') and hasattr(p, 'arrival_time'):
+                actual_wait_time = p.first_dispatch_time - p.arrival_time
+            elif hasattr(p, 'first_ready_time') and hasattr(p, 'arrival_time'):
+                # Fallback if first_dispatch_time not set
+                actual_wait_time = p.first_ready_time - p.arrival_time
+            else:
+                # Use the wait_time that was accumulated (less accurate)
+                actual_wait_time = p.wait_time
+            
             turnaround_time = p.end_time - p.start_time
+            response_time = actual_wait_time  # Response time = time to first CPU access
+            
+            total_wait_time += actual_wait_time
+            total_turnaround_time += turnaround_time
+            total_response_time += response_time
+            
             raw_data.append(
-                f"[{p.pid}: Start={p.start_time} Wait={p.wait_time}, Turnaround={turnaround_time}, Run={p.runtime}, I/O={p.io_time}, InitCpuBurst={p.init_cpu_bursts}, InitIoBurst={p.init_io_bursts}, TotalBursts={p.TotalBursts}]"
+                f"[{p.pid}: Start={p.start_time} Wait={actual_wait_time}, Turnaround={turnaround_time}, Response={response_time}, Run={p.runtime}, I/O={p.io_time}, InitCpuBurst={p.init_cpu_bursts}, InitIoBurst={p.init_io_bursts}, TotalBursts={p.TotalBursts}]"
             )
-        from rich.console import Console
-        from rich.table import Table
-        import re
+        
+        # Calculate averages
+        num_processes = len(self.finished)
+        avg_wait_time = total_wait_time / num_processes
+        avg_turnaround_time = total_turnaround_time / num_processes
+        avg_response_time = total_response_time / num_processes
+        
+        try:
+            from rich.console import Console
+            from rich.table import Table
+            import re
 
-        # # Raw input as strings
-        # raw_data = [
-        #     "[2: Start=0 Wait=14, Turnaround=107, Run=24, I/O=70, InitCpuBurst=24, InitIoBurst=35, TotalBursts=59]",
-        #     "[1: Start=0 Wait=21, Turnaround=123, Run=19, I/O=84, InitCpuBurst=19, InitIoBurst=23, TotalBursts=42]",
-        #     "[3: Start=0 Wait=18, Turnaround=138, Run=33, I/O=88, InitCpuBurst=33, InitIoBurst=61, TotalBursts=94]",
-        # ]
+            # Parse function
+            def parse_job(job_str):
+                job_str = job_str.strip("[]")
+                job_id, rest = job_str.split(":", 1)
+                job_id = job_id.strip()
+                pairs = re.findall(r"(\w+/?.*?)=([\d]+)", rest)
+                return {"ID": job_id, **{k: v for k, v in pairs}}
 
-        # Parse function
-        def parse_job(job_str):
-            job_str = job_str.strip("[]")
-            job_id, rest = job_str.split(":", 1)
-            job_id = job_id.strip()
-            pairs = re.findall(r"(\w+/?.*?)=([\d]+)", rest)
-            return {"ID": job_id, **{k: v for k, v in pairs}}
+            # Convert to list of dicts
+            jobs = [parse_job(entry) for entry in raw_data]
 
-        # Convert to list of dicts
-        jobs = [parse_job(entry) for entry in raw_data]
+            # Build Rich table
+            table = Table(title="Process Details")
+            for col in jobs[0].keys():
+                table.add_column(col, justify="center")
 
-        # Build Rich table
-        table = Table(title="Job Summary")
-        for col in jobs[0].keys():
-            table.add_column(col, justify="center")
+            for job in jobs:
+                table.add_row(*[str(job[col]) for col in job])
 
-        for job in jobs:
-            table.add_row(*[str(job[col]) for col in job])
-
-        # Print it
-        console = Console()
-        console.print(table)
+            # Print it
+            console = Console()
+            console.print(table)
+            
+        except ImportError:
+            # Fallback if rich is not available
+            print("\nProcess Details:")
+            for entry in raw_data:
+                print(f"  {entry}")
+        
+        # Print summary statistics
+        print("\n" + "-"*80)
+        print("               Statistics")
+        print("---------------------------------------------")
+        print("-"*80)
+        print(f"Total Processes Completed:  {num_processes}")
+        print(f"Total Simulation Time:      {self.clock.now()}")
+        print(f"\nAverage Wait Time:          {avg_wait_time:.2f}")
+        print(f"Average Turnaround Time:    {avg_turnaround_time:.2f}")
+        print(f"Average Response Time:      {avg_response_time:.2f}")
+        print("="*80 + "\n")
