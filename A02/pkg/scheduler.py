@@ -379,20 +379,18 @@ class Scheduler:
         
         raw_data = []
         for p in self.finished:
-            # Calculate actual wait time: time from arrival to first dispatch
-            actual_wait_time = 0
-            if hasattr(p, 'first_dispatch_time'):
-                # Wait time = when it first got CPU - when it arrived
-                actual_wait_time = p.first_dispatch_time - p.arrival_time
-            else:
-                # Fallback: use accumulated wait_time (less accurate but better than nothing)
-                actual_wait_time = p.wait_time
+            # FIX: Use the accumulated wait_time from the step() function
+            actual_wait_time = p.wait_time
             
             # Turnaround time = completion - arrival
             turnaround_time = p.end_time - p.arrival_time
             
-            # Response time = first CPU access - arrival (same as wait time in this context)
-            response_time = actual_wait_time
+            # Response time = Time from arrival until FIRST CPU touch
+            # If we missed capturing first_dispatch_time, assume it was immediate (wait_time)
+            if hasattr(p, 'first_dispatch_time'):
+                response_time = p.first_dispatch_time - p.arrival_time
+            else:
+                response_time = actual_wait_time
             
             total_wait_time += actual_wait_time
             total_turnaround_time += turnaround_time

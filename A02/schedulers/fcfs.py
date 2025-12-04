@@ -65,6 +65,8 @@ class FCFSScheduler(Scheduler):
         
         # Increment clock at the end
         self.clock += 1
+        for p in self.ready_queue:
+            p.wait_time += 1  # Increment wait time for everyone waiting
     
     def _process_cpus(self):
         """Process currently running jobs on all CPUs"""

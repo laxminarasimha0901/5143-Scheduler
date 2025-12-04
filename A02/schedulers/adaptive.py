@@ -1,3 +1,4 @@
+
 # Adaptive Scheduling Algorithm Implementation
 # schedulers/adaptive.py
 
@@ -111,6 +112,8 @@ class AdaptiveScheduler(Scheduler):
         self._dispatch_to_cpus()
         self._dispatch_to_io_devices()
         self.clock += 1
+        for p in self.ready_queue:
+            p.wait_time += 1  # Increment wait time for everyone waiting
     
     def _process_cpus(self):
         """Process currently running jobs on all CPUs"""
@@ -249,37 +252,37 @@ class AdaptiveScheduler(Scheduler):
             print(f"  process.wait_time (accumulated) = {process.wait_time}")
             print()
     
-    print("\nAdaptive Scheduler Statistics:")
-    print(f"Base Quantum: {self.base_quantum}, Final Quantum: {self.current_quantum}")
-    print("-" * 70)
+        print("\nAdaptive Scheduler Statistics:")
+        print(f"Base Quantum: {self.base_quantum}, Final Quantum: {self.current_quantum}")
+        print("-" * 70)
     
-    total_turnaround = 0
-    total_waiting = 0
+        total_turnaround = 0
+        total_waiting = 0
     
-    print(f"{'Process':<8} {'Arrival':<8} {'1st CPU':<10} {'Completion':<12} {'Turnaround':<12} {'Waiting':<10}")
-    print("-" * 70)
+        print(f"{'Process':<8} {'Arrival':<8} {'1st CPU':<10} {'Completion':<12} {'Turnaround':<12} {'Waiting':<10}")
+        print("-" * 70)
     
-    for process in self.finished:
-        # Calculate actual wait time: first dispatch time - arrival time
-        if hasattr(process, 'first_dispatch_time'):
-            actual_wait_time = process.first_dispatch_time - process.arrival_time
-        else:
-            # Fallback to accumulated wait_time if first_dispatch_time wasn't tracked
-            actual_wait_time = process.wait_time
+        for process in self.finished:
+            # Calculate actual wait time: first dispatch time - arrival time
+            if hasattr(process, 'first_dispatch_time'):
+                actual_wait_time = process.first_dispatch_time - process.arrival_time
+            else:
+                # Fallback to accumulated wait_time if first_dispatch_time wasn't tracked
+                actual_wait_time = process.wait_time
         
-        turnaround_time = process.end_time - process.arrival_time
-        first_cpu = getattr(process, 'first_dispatch_time', '?')
+            turnaround_time = process.end_time - process.arrival_time
+            first_cpu = getattr(process, 'first_dispatch_time', '?')
         
-        total_turnaround += turnaround_time
-        total_waiting += actual_wait_time
+            total_turnaround += turnaround_time
+            total_waiting += actual_wait_time
         
-        print(f"{process.pid:<8} {process.arrival_time:<8} {first_cpu:<10} {process.end_time:<12} "
+            print(f"{process.pid:<8} {process.arrival_time:<8} {first_cpu:<10} {process.end_time:<12} "
               f"{turnaround_time:<12} {actual_wait_time:<10}")
     
-    print("-" * 70)
-    print(f"Average Turnaround Time: {total_turnaround/len(self.finished):.2f}")
-    print(f"Average Waiting Time:    {total_waiting/len(self.finished):.2f}")
-    print(f"Total Simulation Time:   {self.clock}")
+        print("-" * 70)
+        print(f"Average Turnaround Time: {total_turnaround/len(self.finished):.2f}")
+        print(f"Average Waiting Time:    {total_waiting/len(self.finished):.2f}")
+        print(f"Total Simulation Time:   {self.clock}")
     
     def export_json(self, filename):
         """Export simulation timeline to JSON file"""

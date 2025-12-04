@@ -1,5 +1,77 @@
 {
-  "algorithm": "SRTF",
-  "total_time": 0,
-  "processes": []
+  "algorithm": "RoundRobin",
+  "quantum": 4,
+  "total_time": 422,
+  "processes": [
+    {
+      "pid": "4",
+      "arrival_time": 8,
+      "completion_time": 110,
+      "turnaround_time": 102,
+      "waiting_time": 16
+    },
+    {
+      "pid": "10",
+      "arrival_time": 31,
+      "completion_time": 206,
+      "turnaround_time": 175,
+      "waiting_time": 42
+    },
+    {
+      "pid": "1",
+      "arrival_time": 0,
+      "completion_time": 215,
+      "turnaround_time": 215,
+      "waiting_time": 22
+    },
+    {
+      "pid": "5",
+      "arrival_time": 10,
+      "completion_time": 231,
+      "turnaround_time": 221,
+      "waiting_time": 40
+    },
+    {
+      "pid": "6",
+      "arrival_time": 15,
+      "completion_time": 271,
+      "turnaround_time": 256,
+      "waiting_time": 64
+    },
+    {
+      "pid": "7",
+      "arrival_time": 19,
+      "completion_time": 292,
+      "turnaround_time": 273,
+      "waiting_time": 41
+    },
+    {
+      "pid": "3",
+      "arrival_time": 5,
+      "completion_time": 328,
+      "turnaround_time": 323,
+      "waiting_time": 88
+    },
+    {
+      "pid": "9",
+      "arrival_time": 27,
+      "completion_time": 352,
+      "turnaround_time": 325,
+      "waiting_time": 104
+    },
+    {
+      "pid": "8",
+      "arrival_time": 22,
+      "completion_time": 373,
+      "turnaround_time": 351,
+      "waiting_time": 120
+    },
+    {
+      "pid": "2",
+      "arrival_time": 3,
+      "completion_time": 421,
+      "turnaround_time": 418,
+      "waiting_time": 91
+    }
+  ]
 }

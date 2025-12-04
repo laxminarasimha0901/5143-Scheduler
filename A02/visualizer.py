@@ -386,7 +386,7 @@ def run_pygame_visualization(scheduler, fps=2):
 
 # Example usage
 if __name__ == "__main__":
-    from scheduler import Scheduler, Job
+    from pkg.scheduler import Scheduler, Job
     
     # Create sample jobs
     jobs = [
