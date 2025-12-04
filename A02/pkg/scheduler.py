@@ -64,6 +64,10 @@ class Scheduler:
 
         process.state = "ready"  # sets the current process state to ready
         
+        # Set start_time to arrival_time if not already set
+        if process.start_time == 0:
+            process.start_time = process.arrival_time
+        
         # Track first time entering ready queue (for wait time calculation)
         if not hasattr(process, 'first_ready_time'):
             process.first_ready_time = self.clock.now()
@@ -377,24 +381,25 @@ class Scheduler:
         for p in self.finished:
             # Calculate actual wait time: time from arrival to first dispatch
             actual_wait_time = 0
-            if hasattr(p, 'first_dispatch_time') and hasattr(p, 'arrival_time'):
+            if hasattr(p, 'first_dispatch_time'):
+                # Wait time = when it first got CPU - when it arrived
                 actual_wait_time = p.first_dispatch_time - p.arrival_time
-            elif hasattr(p, 'first_ready_time') and hasattr(p, 'arrival_time'):
-                # Fallback if first_dispatch_time not set
-                actual_wait_time = p.first_ready_time - p.arrival_time
             else:
-                # Use the wait_time that was accumulated (less accurate)
+                # Fallback: use accumulated wait_time (less accurate but better than nothing)
                 actual_wait_time = p.wait_time
             
-            turnaround_time = p.end_time - p.start_time
-            response_time = actual_wait_time  # Response time = time to first CPU access
+            # Turnaround time = completion - arrival
+            turnaround_time = p.end_time - p.arrival_time
+            
+            # Response time = first CPU access - arrival (same as wait time in this context)
+            response_time = actual_wait_time
             
             total_wait_time += actual_wait_time
             total_turnaround_time += turnaround_time
             total_response_time += response_time
             
             raw_data.append(
-                f"[{p.pid}: Start={p.start_time} Wait={actual_wait_time}, Turnaround={turnaround_time}, Response={response_time}, Run={p.runtime}, I/O={p.io_time}, InitCpuBurst={p.init_cpu_bursts}, InitIoBurst={p.init_io_bursts}, TotalBursts={p.TotalBursts}]"
+                f"[{p.pid}: Arrival={p.arrival_time} FirstCPU={getattr(p, 'first_dispatch_time', '?')} Wait={actual_wait_time}, Turnaround={turnaround_time}, Response={response_time}, Run={p.runtime}, I/O={p.io_time}, InitCpuBurst={p.init_cpu_bursts}, InitIoBurst={p.init_io_bursts}, TotalBursts={p.TotalBursts}]"
             )
         
         # Calculate averages
@@ -439,8 +444,7 @@ class Scheduler:
         
         # Print summary statistics
         print("\n" + "-"*80)
-        print("               Statistics")
-        print("---------------------------------------------")
+        print("SUMMARY STATISTICS")
         print("-"*80)
         print(f"Total Processes Completed:  {num_processes}")
         print(f"Total Simulation Time:      {self.clock.now()}")

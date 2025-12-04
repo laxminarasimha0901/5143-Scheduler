@@ -177,15 +177,17 @@ class AdaptiveScheduler(Scheduler):
     def _dispatch_to_cpus(self):
         """Dispatch ready processes to available CPUs adaptively"""
         self._sort_ready_queue()
-        
+    
         while len([p for p in self.cpu_queue if p is not None]) < self.num_cpus and self.ready_queue:
             process = self.ready_queue.pop(0)
             if process.state == "ready":
                 for cpu_index in range(self.num_cpus):
                     if self.cpu_queue[cpu_index] is None:
                         process.state = "running"
-                        if not hasattr(process, 'first_run_time'):
-                            process.first_run_time = self.clock
+                        # Track first time process gets CPU (for wait time calculation)
+                        if not hasattr(process, 'first_dispatch_time'):
+                            process.first_dispatch_time = self.clock
+                            print(f"DEBUG DISPATCH: Process {process.pid} first dispatch at clock={self.clock}, arrival={process.arrival_time}, wait={self.clock - process.arrival_time}")
                         self.cpu_queue[cpu_index] = process
                         self.quantum_remaining[cpu_index] = self.current_quantum
                         if self.verbose:
@@ -231,25 +233,53 @@ class AdaptiveScheduler(Scheduler):
         if not self.finished:
             print("No processes have completed.")
             return
-        
-        print("\nAdaptive Scheduler Statistics:")
-        print(f"Base Quantum: {self.base_quantum}, Final Quantum: {self.current_quantum}")
-        print("-" * 60)
-        
-        total_turnaround = sum(p.turnaround_time for p in self.finished)
-        total_waiting = sum(p.wait_time for p in self.finished)
-        
-        print(f"{'Process':<8} {'Arrival':<8} {'Completion':<10} {'Turnaround':<10} {'Waiting':<10}")
-        print("-" * 60)
-        
+    
+        print("\n" + "="*80)
+        print("DEBUG: Checking all finished processes")
+        print("="*80)
+    
         for process in self.finished:
-            print(f"{process.pid:<8} {process.arrival_time:<8} {process.end_time:<10} "
-                  f"{process.turnaround_time:<10} {process.wait_time:<10}")
+            print(f"Process {process.pid}:")
+            print(f"  arrival_time = {process.arrival_time}")
+            print(f"  end_time = {process.end_time}")
+            print(f"  hasattr first_dispatch_time? {hasattr(process, 'first_dispatch_time')}")
+            if hasattr(process, 'first_dispatch_time'):
+                print(f"  first_dispatch_time = {process.first_dispatch_time}")
+                print(f"  Calculated wait time = {process.first_dispatch_time - process.arrival_time}")
+            print(f"  process.wait_time (accumulated) = {process.wait_time}")
+            print()
+    
+    print("\nAdaptive Scheduler Statistics:")
+    print(f"Base Quantum: {self.base_quantum}, Final Quantum: {self.current_quantum}")
+    print("-" * 70)
+    
+    total_turnaround = 0
+    total_waiting = 0
+    
+    print(f"{'Process':<8} {'Arrival':<8} {'1st CPU':<10} {'Completion':<12} {'Turnaround':<12} {'Waiting':<10}")
+    print("-" * 70)
+    
+    for process in self.finished:
+        # Calculate actual wait time: first dispatch time - arrival time
+        if hasattr(process, 'first_dispatch_time'):
+            actual_wait_time = process.first_dispatch_time - process.arrival_time
+        else:
+            # Fallback to accumulated wait_time if first_dispatch_time wasn't tracked
+            actual_wait_time = process.wait_time
         
-        print("-" * 60)
-        print(f"Average Turnaround Time: {total_turnaround/len(self.finished):.2f}")
-        print(f"Average Waiting Time:   {total_waiting/len(self.finished):.2f}")
-        print(f"Total Simulation Time: {self.clock}")
+        turnaround_time = process.end_time - process.arrival_time
+        first_cpu = getattr(process, 'first_dispatch_time', '?')
+        
+        total_turnaround += turnaround_time
+        total_waiting += actual_wait_time
+        
+        print(f"{process.pid:<8} {process.arrival_time:<8} {first_cpu:<10} {process.end_time:<12} "
+              f"{turnaround_time:<12} {actual_wait_time:<10}")
+    
+    print("-" * 70)
+    print(f"Average Turnaround Time: {total_turnaround/len(self.finished):.2f}")
+    print(f"Average Waiting Time:    {total_waiting/len(self.finished):.2f}")
+    print(f"Total Simulation Time:   {self.clock}")
     
     def export_json(self, filename):
         """Export simulation timeline to JSON file"""
@@ -261,12 +291,19 @@ class AdaptiveScheduler(Scheduler):
         }
         
         for process in self.finished:
+            # Calculate actual wait time
+            if hasattr(process, 'first_dispatch_time'):
+                actual_wait_time = process.first_dispatch_time - process.arrival_time
+            else:
+                actual_wait_time = process.wait_time
+                
             process_data = {
                 "pid": process.pid,
                 "arrival_time": process.arrival_time,
+                "first_dispatch_time": getattr(process, 'first_dispatch_time', None),
                 "completion_time": process.end_time,
-                "turnaround_time": process.turnaround_time,
-                "waiting_time": process.wait_time
+                "turnaround_time": process.end_time - process.arrival_time,
+                "waiting_time": actual_wait_time
             }
             timeline_data["processes"].append(process_data)
         
@@ -276,15 +313,22 @@ class AdaptiveScheduler(Scheduler):
     def export_csv(self, filename):
         """Export simulation results to CSV file"""
         with open(filename, 'w', newline='') as csvfile:
-            fieldnames = ['pid', 'arrival_time', 'completion_time', 'turnaround_time', 'waiting_time']
+            fieldnames = ['pid', 'arrival_time', 'first_dispatch_time', 'completion_time', 'turnaround_time', 'waiting_time']
             writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
             
             writer.writeheader()
             for process in self.finished:
+                # Calculate actual wait time
+                if hasattr(process, 'first_dispatch_time'):
+                    actual_wait_time = process.first_dispatch_time - process.arrival_time
+                else:
+                    actual_wait_time = process.wait_time
+                    
                 writer.writerow({
                     'pid': process.pid,
                     'arrival_time': process.arrival_time,
+                    'first_dispatch_time': getattr(process, 'first_dispatch_time', None),
                     'completion_time': process.end_time,
-                    'turnaround_time': process.turnaround_time,
-                    'waiting_time': process.wait_time
+                    'turnaround_time': process.end_time - process.arrival_time,
+                    'waiting_time': actual_wait_time
                 })
